@@ -8,10 +8,11 @@ interface ApiInterface {
   data: League[] | League;
 }
 
+export type ApiDispatchTypes = 'FETCH_LEAGUES' | 'FETCH_LEAGUE_BY_ID';
+
 export type ActionType =
   | { type: 'LOADING' }
-  | { type: 'FETCH_LEAGUES'; payload: ApiInterface }
-  | { type: 'FETCH_LEAGUE_BY_ID'; payload: ApiInterface }
+  | { type: ApiDispatchTypes; payload: ApiInterface }
   | { type: 'ERROR'; payload: string }
   | ((dispatch: React.Dispatch<ActionType>) => void);
 
@@ -50,6 +51,7 @@ export function useThunkReducer(): [StateType, React.Dispatch<ActionType>] {
 
   const enhancedDispatch = useCallback(
     (action: ActionType) => {
+      console.log(action);
       if (typeof action === 'function') {
         action(dispatch);
       } else {

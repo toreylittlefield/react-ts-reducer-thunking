@@ -62,6 +62,12 @@ export default function App() {
       });
     const teamMatches = filterTeams(searchVal);
     setList(teamMatches);
+    switch (teamMatches.length) {
+      case 0:
+        return setSelectedTeam(intialSelectedState);
+      case 1:
+        return setSelectedTeam(teamMatches[0]);
+    }
   };
 
   const handleSelectTeam = (event: React.ChangeEvent<HTMLSelectElement>) => {

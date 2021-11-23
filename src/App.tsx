@@ -112,12 +112,15 @@ const fetchByLeagueId = (params: string, cache: Cache<any>) => {
   };
 };
 
+const intialSelectedState = { id: '', abbr: '', name: '' };
+
 export default function App() {
   const [{ loading, response, error, cache }, dispatch] = useFetch();
   const [list, setList] = useState<typeof teams>([]);
-  const [selectedTeam, setSelectedTeam] = useState<typeof teams[0]>({ id: '', abbr: '', name: '' });
+  const [selectedTeam, setSelectedTeam] = useState<typeof teams[0]>(intialSelectedState);
 
   useEffect(() => {
+    console.log(selectedTeam.id);
     if (selectedTeam.id.length !== 0) return;
     const fetchAllLeagues = fetchLeagues('', cache);
     dispatch(fetchAllLeagues);
@@ -131,6 +134,7 @@ export default function App() {
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const searchVal = event.target.value;
+    if (searchVal === '') setSelectedTeam(intialSelectedState);
     const filterTeams = (str: string) =>
       teams.filter((team: typeof teams[0]) => {
         const teamName = team.name.toLowerCase();
@@ -169,8 +173,8 @@ export default function App() {
           <h2>{name}</h2>
           <h3>{abbr}</h3>
           <picture>
-            <source srcSet={dark} media="(min-width: 800px)" />
-            <img src={light} alt={name} />
+            <source srcSet={light} media="(min-width: 800px)" />
+            <img src={dark} alt={name} />
           </picture>
         </div>
       </section>

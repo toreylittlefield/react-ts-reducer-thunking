@@ -1,6 +1,6 @@
-import { useReducer, useEffect, useCallback, useState } from "react";
-import "./styles.css";
-import { teams } from "./teamnames";
+import { useReducer, useEffect, useCallback, useState } from 'react';
+import './styles.css';
+import { teams } from './teamnames';
 
 const endpoint = `https://api-football-standings.azharimm.site/leagues
 `;
@@ -20,14 +20,14 @@ interface League {
 
 interface ApiInterface {
   status: boolean;
-  data: League[];
+  data: League[] | League;
 }
 
 type ActionType =
-  | { type: "LOADING" }
-  | { type: "FETCH_LEAGUES"; payload: ApiInterface }
-  | { type: "FETCH_LEAGUE_BY_ID"; payload: League }
-  | { type: "ERROR"; payload: string }
+  | { type: 'LOADING' }
+  | { type: 'FETCH_LEAGUES'; payload: ApiInterface }
+  | { type: 'FETCH_LEAGUE_BY_ID'; payload: ApiInterface }
+  | { type: 'ERROR'; payload: string }
   | ((dispatch: React.Dispatch<ActionType>) => void);
 
 type StateType = {
@@ -39,30 +39,32 @@ type StateType = {
 const initialState: StateType = {
   loading: false,
   data: null,
-  error: null
+  error: null,
 };
 
 const reducer = (state: StateType, action: ActionType) => {
   // if() return state
-  if (typeof action === "function") return state;
+  if (typeof action === 'function') return state;
   switch (action.type) {
-    case "LOADING":
+    case 'LOADING':
       return { ...state, loading: true };
-    case "FETCH_LEAGUES":
+    case 'FETCH_LEAGUES':
       return { ...state, loading: false, data: action.payload };
-    case "ERROR":
+    case 'FETCH_LEAGUE_BY_ID':
+      return { ...state, loading: false, data: action.payload };
+    case 'ERROR':
       return { ...state, loading: false, error: action.payload };
     default:
       return state;
   }
 };
 
-function useFetch(param: string): [StateType, React.Dispatch<ActionType>] {
+function useFetch(): [StateType, React.Dispatch<ActionType>] {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const enhancedDispatch = useCallback(
     (action: ActionType) => {
-      if (typeof action === "function") {
+      if (typeof action === 'function') {
         action(dispatch);
       } else {
         dispatch(action);
@@ -74,36 +76,42 @@ function useFetch(param: string): [StateType, React.Dispatch<ActionType>] {
 }
 
 const fetchLeagues = (dispatch: React.Dispatch<ActionType>) => {
-  dispatch({ type: "LOADING" });
-  fetch(endpoint)
+  dispatch({ type: 'LOADING' });
+  const res = fetch(endpoint)
     .then((res) => res.json())
-    .then((json) => dispatch({ type: "FETCH_LEAGUES", payload: json }))
-    .catch((error) => dispatch({ type: "ERROR", payload: error }));
+    .then((json) => dispatch({ type: 'FETCH_LEAGUES', payload: json }))
+    .catch((error) => dispatch({ type: 'ERROR', payload: error }));
+  return res;
 };
 
 const fetchByParams = (params: string) => {
   return (dispatch: React.Dispatch<ActionType>) => {
-    dispatch({ type: "LOADING" });
+    dispatch({ type: 'LOADING' });
     fetch(endpoint + params)
       .then((res) => res.json())
-      .then((json) => dispatch({ type: "FETCH_LEAGUE_BY_ID", payload: json }))
-      .catch((error) => dispatch({ type: "ERROR", payload: error }));
+      .then((json) => {
+        console.log(json);
+        dispatch({ type: 'FETCH_LEAGUE_BY_ID', payload: json });
+      })
+      .catch((error) => dispatch({ type: 'ERROR', payload: error }));
   };
 };
 
 export default function App() {
-  const [{ loading, data, error }, dispatch] = useFetch("");
+  const [{ loading, data, error }, dispatch] = useFetch();
   const [list, setList] = useState<typeof teams>([]);
-  const [selectedTeam, setSelectedTeam] = useState<typeof teams[0]>();
+  const [selectedTeam, setSelectedTeam] = useState<typeof teams[0]>({ id: '', abbr: '', name: '' });
 
   useEffect(() => {
+    if (selectedTeam.id.length !== 0) return;
     dispatch(fetchLeagues);
-  }, [dispatch]);
+  }, [dispatch, selectedTeam.id]);
 
   useEffect(() => {
-    const fetchLeague = fetchByParams("/eng.1");
+    if (selectedTeam.id === '') return;
+    const fetchLeague = fetchByParams('/' + selectedTeam.id);
     dispatch(fetchLeague);
-  }, []);
+  }, [selectedTeam.id]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const searchVal = event.target.value;
@@ -125,40 +133,49 @@ export default function App() {
   };
 
   const handleSelectTeam = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedTeamId = event.target.getAttribute("data-id");
-    const selectedTeamAbbr = event.target.getAttribute("data-abbr");
-    if (!selectedTeamId || !selectedTeamAbbr) return;
-    const team: typeof teams[0] = {
-      id: selectedTeamId,
-      abbr: selectedTeamAbbr,
-      name: event.target.value
-    };
+    console.log(event.target.value);
+    const findTeam = list.find((team) => team.name === event.target.value);
+    if (findTeam === undefined) return;
+    const team: typeof teams[0] = findTeam;
     setSelectedTeam(team);
+  };
+
+  type LeagueInfoProps = {
+    league: League;
+  };
+
+  const LeagueInfo = ({ league }: LeagueInfoProps) => {
+    const { id, name, slug, abbr, logos } = league;
+    const { light, dark } = logos;
+    return (
+      <section key={id}>
+        <div>
+          <h2>{name}</h2>
+          <h3>{abbr}</h3>
+          <picture>
+            <source srcSet={dark} media="(min-width: 800px)" />
+            <img src={light} alt={name} />
+          </picture>
+        </div>
+      </section>
+    );
   };
 
   const selector =
     list.length > 0 ? (
       <>
         <label htmlFor="team-select">Select Team</label>
-        <select
-          name="teams"
-          id="team-select"
-          value={selectedTeam?.name}
-          onChange={handleSelectTeam}
-        >
+        <select name="teams" id="team-select" value={selectedTeam?.name} onChange={handleSelectTeam}>
           {list.map((team) => (
-            <option
-              key={team.id}
-              data-abbr={team.abbr}
-              data-id={team.id}
-              value={team.name}
-            >
+            <option key={team.id} value={team.name}>
               {team.name}
             </option>
           ))}
         </select>
       </>
     ) : null;
+
+  if (data === null) return null;
 
   return (
     <div className="App">
@@ -170,22 +187,13 @@ export default function App() {
           {selector}
         </fieldset>
       </form>
-      {data?.data?.map((league) => {
-        const { id, name, slug, abbr, logos } = league;
-        const { light, dark } = logos;
-        return (
-          <section key={id}>
-            <div>
-              <h2>{name}</h2>
-              <h3>{abbr}</h3>
-              <picture>
-                <source srcSet={dark} media="(min-width: 800px)" />
-                <img src={light} alt={name} />
-              </picture>
-            </div>
-          </section>
-        );
-      })}
+      {Array.isArray(data?.data) ? (
+        data.data.map((league) => {
+          <LeagueInfo key={league.id} league={league} />;
+        })
+      ) : (
+        <LeagueInfo league={data.data} />
+      )}
       <div>{JSON.stringify({ loading, data, error }, null, 2)}</div>
     </div>
   );

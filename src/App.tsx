@@ -3,44 +3,8 @@ import './styles.css';
 import { League, LeagueInfo } from './components/LeagueInfo';
 import { Selector } from './components/Selector';
 import { teams } from './teamnames';
-import { Cache, ActionType, useThunkReducer } from './hooks/useThunkReducer';
-
-const endpoint = `https://api-football-standings.azharimm.site/leagues
-`;
-
-const fetchLeagues = (params: string, cache: Cache<any>) => {
-  return (dispatch: React.Dispatch<ActionType>) => {
-    dispatch({ type: 'LOADING' });
-    if (params in cache) {
-      dispatch({ type: 'FETCH_LEAGUES', payload: cache[params] });
-      return;
-    }
-    fetch(endpoint)
-      .then((res) => res.json())
-      .then((json) => {
-        cache[params] = json;
-        dispatch({ type: 'FETCH_LEAGUES', payload: json });
-      })
-      .catch((error) => dispatch({ type: 'ERROR', payload: error }));
-  };
-};
-
-const fetchByLeagueId = (params: string, cache: Cache<any>) => {
-  return (dispatch: React.Dispatch<ActionType>) => {
-    dispatch({ type: 'LOADING' });
-    if (params in cache) {
-      dispatch({ type: 'FETCH_LEAGUE_BY_ID', payload: cache[params] });
-      return;
-    }
-    fetch(endpoint + params)
-      .then((res) => res.json())
-      .then((json) => {
-        cache[params] = json;
-        dispatch({ type: 'FETCH_LEAGUE_BY_ID', payload: json });
-      })
-      .catch((error) => dispatch({ type: 'ERROR', payload: error }));
-  };
-};
+import { useThunkReducer } from './hooks/useThunkReducer';
+import { dispatchFetch } from './api/api';
 
 const intialSelectedState = { id: '', abbr: '', name: '' };
 
@@ -51,11 +15,14 @@ export default function App() {
 
   useEffect(() => {
     if (selectedTeam.id === '') {
-      const fetchAllLeagues = fetchLeagues('', cache);
+      const action = 'FETCH_LEAGUES';
+      const fetchAllLeagues = dispatchFetch(cache, action);
       dispatch(fetchAllLeagues);
     }
     if (selectedTeam.id.length !== 0) {
-      const fetchLeague = fetchByLeagueId('/' + selectedTeam.id, cache);
+      const action = 'FETCH_LEAGUE_BY_ID';
+      const param = `/${selectedTeam.id}`;
+      const fetchLeague = dispatchFetch(cache, action, param);
       dispatch(fetchLeague);
     }
   }, [dispatch, selectedTeam.id, cache]);
@@ -73,7 +40,7 @@ export default function App() {
             abbr: team.abbr,
           };
         });
-      setList(getTeamNames());
+      setList(getTeamNames);
     }
   }, [list, response?.data]);
 

@@ -1,9 +1,11 @@
-import { useReducer, useEffect, useCallback, useState } from 'react';
+import React, { useReducer, useEffect, useCallback, useState, useRef } from 'react';
 import './styles.css';
 import { teams } from './teamnames';
 
 const endpoint = `https://api-football-standings.azharimm.site/leagues
 `;
+
+type Cache<T> = { [url: string]: T };
 
 interface Logos {
   light: string;
@@ -32,26 +34,27 @@ type ActionType =
 
 type StateType = {
   loading: boolean;
-  data: null | ApiInterface;
+  response: null | ApiInterface;
   error: null | string;
+  cache: Cache<string>;
 };
 
 const initialState: StateType = {
   loading: false,
-  data: null,
+  response: null,
   error: null,
+  cache: {},
 };
 
 const reducer = (state: StateType, action: ActionType) => {
-  // if() return state
   if (typeof action === 'function') return state;
   switch (action.type) {
     case 'LOADING':
       return { ...state, loading: true };
     case 'FETCH_LEAGUES':
-      return { ...state, loading: false, data: action.payload };
+      return { ...state, loading: false, response: action.payload };
     case 'FETCH_LEAGUE_BY_ID':
-      return { ...state, loading: false, data: action.payload };
+      return { ...state, loading: false, response: action.payload };
     case 'ERROR':
       return { ...state, loading: false, error: action.payload };
     default:
@@ -75,22 +78,34 @@ function useFetch(): [StateType, React.Dispatch<ActionType>] {
   return [state, enhancedDispatch];
 }
 
-const fetchLeagues = (dispatch: React.Dispatch<ActionType>) => {
-  dispatch({ type: 'LOADING' });
-  const res = fetch(endpoint)
-    .then((res) => res.json())
-    .then((json) => dispatch({ type: 'FETCH_LEAGUES', payload: json }))
-    .catch((error) => dispatch({ type: 'ERROR', payload: error }));
-  return res;
-};
-
-const fetchByParams = (params: string) => {
+const fetchLeagues = (params: string, cache: Cache<any>) => {
   return (dispatch: React.Dispatch<ActionType>) => {
     dispatch({ type: 'LOADING' });
+    if (params in cache) {
+      dispatch({ type: 'FETCH_LEAGUES', payload: cache[params] });
+      return;
+    }
+    fetch(endpoint)
+      .then((res) => res.json())
+      .then((json) => {
+        cache[params] = json;
+        dispatch({ type: 'FETCH_LEAGUES', payload: json });
+      })
+      .catch((error) => dispatch({ type: 'ERROR', payload: error }));
+  };
+};
+
+const fetchByLeagueId = (params: string, cache: Cache<any>) => {
+  return (dispatch: React.Dispatch<ActionType>) => {
+    dispatch({ type: 'LOADING' });
+    if (params in cache) {
+      dispatch({ type: 'FETCH_LEAGUE_BY_ID', payload: cache[params] });
+      return;
+    }
     fetch(endpoint + params)
       .then((res) => res.json())
       .then((json) => {
-        console.log(json);
+        cache[params] = json;
         dispatch({ type: 'FETCH_LEAGUE_BY_ID', payload: json });
       })
       .catch((error) => dispatch({ type: 'ERROR', payload: error }));
@@ -98,20 +113,21 @@ const fetchByParams = (params: string) => {
 };
 
 export default function App() {
-  const [{ loading, data, error }, dispatch] = useFetch();
+  const [{ loading, response, error, cache }, dispatch] = useFetch();
   const [list, setList] = useState<typeof teams>([]);
   const [selectedTeam, setSelectedTeam] = useState<typeof teams[0]>({ id: '', abbr: '', name: '' });
 
   useEffect(() => {
     if (selectedTeam.id.length !== 0) return;
-    dispatch(fetchLeagues);
-  }, [dispatch, selectedTeam.id]);
+    const fetchAllLeagues = fetchLeagues('', cache);
+    dispatch(fetchAllLeagues);
+  }, [dispatch, selectedTeam.id, cache]);
 
   useEffect(() => {
     if (selectedTeam.id === '') return;
-    const fetchLeague = fetchByParams('/' + selectedTeam.id);
+    const fetchLeague = fetchByLeagueId('/' + selectedTeam.id, cache);
     dispatch(fetchLeague);
-  }, [selectedTeam.id]);
+  }, [selectedTeam.id, cache, dispatch]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const searchVal = event.target.value;
@@ -175,7 +191,9 @@ export default function App() {
       </>
     ) : null;
 
-  if (data === null) return null;
+  if (response === null || !response) {
+    return null;
+  }
 
   return (
     <div className="App">
@@ -187,14 +205,12 @@ export default function App() {
           {selector}
         </fieldset>
       </form>
-      {Array.isArray(data?.data) ? (
-        data.data.map((league) => {
-          <LeagueInfo key={league.id} league={league} />;
-        })
+      {Array.isArray(response.data) ? (
+        response.data.map((league) => <LeagueInfo key={league.id} league={league} />)
       ) : (
-        <LeagueInfo league={data.data} />
+        <LeagueInfo league={response.data} />
       )}
-      <div>{JSON.stringify({ loading, data, error }, null, 2)}</div>
+      <div>{JSON.stringify({ loading, response, error }, null, 2)}</div>
     </div>
   );
 }

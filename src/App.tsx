@@ -1,24 +1,13 @@
 import React, { useReducer, useEffect, useCallback, useState, useRef } from 'react';
 import './styles.css';
+import { League, LeagueInfo } from './components/LeagueInfo';
+import { Selector } from './components/Selector';
 import { teams } from './teamnames';
 
 const endpoint = `https://api-football-standings.azharimm.site/leagues
 `;
 
 type Cache<T> = { [url: string]: T };
-
-interface Logos {
-  light: string;
-  dark: string;
-}
-
-interface League {
-  id: string;
-  name: string;
-  slug: string;
-  abbr: string;
-  logos: Logos;
-}
 
 interface ApiInterface {
   status: boolean;
@@ -120,17 +109,32 @@ export default function App() {
   const [selectedTeam, setSelectedTeam] = useState<typeof teams[0]>(intialSelectedState);
 
   useEffect(() => {
-    console.log(selectedTeam.id);
-    if (selectedTeam.id.length !== 0) return;
-    const fetchAllLeagues = fetchLeagues('', cache);
-    dispatch(fetchAllLeagues);
+    if (selectedTeam.id === '') {
+      const fetchAllLeagues = fetchLeagues('', cache);
+      dispatch(fetchAllLeagues);
+    }
+    if (selectedTeam.id.length !== 0) {
+      const fetchLeague = fetchByLeagueId('/' + selectedTeam.id, cache);
+      dispatch(fetchLeague);
+    }
   }, [dispatch, selectedTeam.id, cache]);
 
   useEffect(() => {
-    if (selectedTeam.id === '') return;
-    const fetchLeague = fetchByLeagueId('/' + selectedTeam.id, cache);
-    dispatch(fetchLeague);
-  }, [selectedTeam.id, cache, dispatch]);
+    if (!response || !response.data) return;
+    if (list.length > 0) return;
+    if (Array.isArray(response.data)) {
+      const data: League[] = response.data;
+      const getTeamNames = () =>
+        data.map((team) => {
+          return {
+            id: team.id,
+            name: team.name,
+            abbr: team.abbr,
+          };
+        });
+      setList(getTeamNames());
+    }
+  }, [list, response?.data]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const searchVal = event.target.value;
@@ -153,47 +157,11 @@ export default function App() {
   };
 
   const handleSelectTeam = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    console.log(event.target.value);
     const findTeam = list.find((team) => team.name === event.target.value);
-    if (findTeam === undefined) return;
-    const team: typeof teams[0] = findTeam;
+    if (findTeam === undefined) return setSelectedTeam(intialSelectedState);
+    const team = findTeam;
     setSelectedTeam(team);
   };
-
-  type LeagueInfoProps = {
-    league: League;
-  };
-
-  const LeagueInfo = ({ league }: LeagueInfoProps) => {
-    const { id, name, slug, abbr, logos } = league;
-    const { light, dark } = logos;
-    return (
-      <section key={id}>
-        <div>
-          <h2>{name}</h2>
-          <h3>{abbr}</h3>
-          <picture>
-            <source srcSet={light} media="(min-width: 800px)" />
-            <img src={dark} alt={name} />
-          </picture>
-        </div>
-      </section>
-    );
-  };
-
-  const selector =
-    list.length > 0 ? (
-      <>
-        <label htmlFor="team-select">Select Team</label>
-        <select name="teams" id="team-select" value={selectedTeam?.name} onChange={handleSelectTeam}>
-          {list.map((team) => (
-            <option key={team.id} value={team.name}>
-              {team.name}
-            </option>
-          ))}
-        </select>
-      </>
-    ) : null;
 
   if (response === null || !response) {
     return null;
@@ -206,7 +174,7 @@ export default function App() {
           <legend>Debouncer Example</legend>
           <label htmlFor="search"> Search Leagues</label>
           <input type="text" id="search" onChange={handleChange} />
-          {selector}
+          <Selector list={list} selectedTeam={selectedTeam} handleSelectTeam={handleSelectTeam} />
         </fieldset>
       </form>
       {Array.isArray(response.data) ? (

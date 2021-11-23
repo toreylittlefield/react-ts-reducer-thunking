@@ -44,6 +44,23 @@ export default function App() {
     }
   }, [list, response?.data]);
 
+  function debounce(callback: any, timeOut: number) {
+    let id: ReturnType<typeof setTimeout> | null = null;
+    console.count('outer');
+
+    return (...arg: any[]) => {
+      console.count('inner');
+
+      if (id) {
+        clearTimeout(id);
+      }
+      id = setTimeout(() => {
+        callback(...arg);
+        id = null;
+      }, timeOut);
+    };
+  }
+
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const searchVal = event.target.value;
     if (searchVal === '') setSelectedTeam(intialSelectedState);
@@ -70,6 +87,11 @@ export default function App() {
     }
   };
 
+  const debounceHandleChange = useCallback(
+    debounce((event: React.ChangeEvent<HTMLInputElement>) => handleChange(event), 300),
+    []
+  );
+
   const handleSelectTeam = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const findTeam = list.find((team) => team.name === event.target.value);
     if (findTeam === undefined) return setSelectedTeam(intialSelectedState);
@@ -87,7 +109,7 @@ export default function App() {
         <fieldset>
           <legend>Debouncer Example</legend>
           <label htmlFor="search"> Search Leagues</label>
-          <input type="text" id="search" onChange={handleChange} />
+          <input type="text" id="search" onChange={debounceHandleChange} />
           <Selector list={list} selectedTeam={selectedTeam} handleSelectTeam={handleSelectTeam} />
         </fieldset>
       </form>

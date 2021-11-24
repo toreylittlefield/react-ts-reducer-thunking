@@ -3,19 +3,23 @@ export interface Logos {
   dark: string;
 }
 
-export interface League {
+export type League = {
   id: string;
   name: string;
   slug: string;
   abbr: string;
   logos: Logos;
-}
+};
 
 type LeagueInfoProps = {
   league: League;
 };
 
 export const LeagueInfo = ({ league }: LeagueInfoProps) => {
+  if (!league.id) {
+    console.log({ league });
+    return null;
+  }
   const { id, name, slug, abbr, logos } = league;
   const { light, dark } = logos;
   return (

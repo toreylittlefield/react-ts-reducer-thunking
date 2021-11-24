@@ -1,24 +1,40 @@
 import { useCallback, useReducer } from 'react';
 import { League } from '../components/LeagueInfo';
+import { ApiDispatchTypes } from '../api/api';
+import { LeagueStandingsData } from '../types/standings.interface';
 
 export type Cache = { [key: string]: any };
 
-interface ApiInterface {
-  status: boolean;
-  data: League[] | League;
-}
+type FetchLeagueByIdType = {
+  type: 'FETCH_LEAGUE_BY_ID';
+  data: League;
+};
 
-export type ApiDispatchTypes = 'FETCH_LEAGUES' | 'FETCH_LEAGUE_BY_ID' | 'FETCH_LEAGUE_STANDINGS';
+type FetchLeaguesType = {
+  type: 'FETCH_LEAGUES';
+  data: League[];
+};
+
+type FetchLeagueStandingsType = {
+  type: 'FETCH_LEAGUE_STANDINGS';
+  data: LeagueStandingsData & League;
+};
+
+type ApiUnion = FetchLeagueByIdType | FetchLeaguesType | FetchLeagueStandingsType;
+
+type ApiType = {
+  status: boolean;
+} & ApiUnion;
 
 export type ActionType =
   | { type: 'LOADING' }
-  | { type: ApiDispatchTypes; payload: ApiInterface }
+  | { type: ApiDispatchTypes; payload: ApiType }
   | { type: 'ERROR'; payload: string }
   | ((dispatch: React.Dispatch<ActionType>) => void);
 
 type StateType = {
   loading: boolean;
-  response: null | ApiInterface;
+  response: null | ApiType;
   error: null | string;
   cache: Cache;
 };
@@ -39,6 +55,16 @@ const reducer = (state: StateType, action: ActionType) => {
       return { ...state, loading: false, response: action.payload };
     case 'FETCH_LEAGUE_BY_ID':
       return { ...state, loading: false, response: action.payload };
+    case 'FETCH_LEAGUE_STANDINGS':
+      const dataMerge: any = {
+        ...action.payload,
+        data: { ...state.response?.data, ...action.payload.data },
+      };
+      return {
+        ...state,
+        loading: false,
+        response: dataMerge,
+      };
     case 'ERROR':
       return { ...state, loading: false, error: action.payload };
     default:
@@ -59,5 +85,6 @@ export function useThunkReducer(): [StateType, React.Dispatch<ActionType>] {
     },
     [dispatch]
   );
+  console.log(state.response);
   return [state, enhancedDispatch];
 }

@@ -22,7 +22,7 @@ type FetchLeagueStandingsType = {
 
 type ApiUnion = FetchLeagueByIdType | FetchLeaguesType | FetchLeagueStandingsType;
 
-type ApiType = {
+export type ApiType = {
   status: boolean;
 } & ApiUnion;
 

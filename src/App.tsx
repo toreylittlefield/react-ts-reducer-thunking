@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import './styles.css';
 import { League, LeagueInfo } from './components/LeagueInfo';
 import { Selector } from './components/Selector';
@@ -18,20 +18,23 @@ export default function App() {
       const action: ApiDispatchTypes = 'FETCH_LEAGUES';
       const fetchAllLeagues = dispatchFetch(cache, action);
       dispatch(fetchAllLeagues);
+      return;
     }
-    if (selectedTeam.id.length !== 0) {
-      const action: ApiDispatchTypes = 'FETCH_LEAGUE_BY_ID';
-      const param = `/${selectedTeam.id}`;
-      const fetchLeague = dispatchFetch(cache, action, param);
-      dispatch(fetchLeague);
-      if (list.length === 1) {
-        const action: ApiDispatchTypes = 'FETCH_LEAGUE_STANDINGS';
-        const param = `/${selectedTeam.id}/standings?season=2021&sort=asc`;
+    if (selectedTeam.id) {
+      (() => {
+        const action: ApiDispatchTypes = 'FETCH_LEAGUE_BY_ID';
+        const param = `/${selectedTeam.id}`;
         const fetchLeague = dispatchFetch(cache, action, param);
         dispatch(fetchLeague);
-      }
+        return (() => {
+          const action: ApiDispatchTypes = 'FETCH_LEAGUE_STANDINGS';
+          const param = `/${selectedTeam.id}/standings?season=2021&sort=asc`;
+          const fetchLeague = dispatchFetch(cache, action, param);
+          dispatch(fetchLeague);
+        })();
+      })();
     }
-  }, [dispatch, selectedTeam.id, cache]);
+  }, [dispatch, selectedTeam.id, cache, list]);
 
   useEffect(() => {
     if (!response || !response.data) return;

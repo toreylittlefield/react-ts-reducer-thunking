@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import './styles.css';
+import './styles.scss';
 import { League, LeagueInfo } from './components/LeagueInfo';
 import { Selector } from './components/Selector';
 import { teams } from './teamnames';
@@ -11,6 +11,8 @@ const intialSelectedState = { id: '', abbr: '', name: '' };
 export default function App() {
   const [{ loading, response, error, cache }, dispatch] = useThunkReducer();
   const [list, setList] = useState<typeof teams>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [leaguesList, setLeaguesList] = useState<typeof teams>([]);
   const [selectedTeam, setSelectedTeam] = useState<typeof teams[0]>(intialSelectedState);
 
   useEffect(() => {
@@ -34,24 +36,29 @@ export default function App() {
         })();
       })();
     }
-  }, [dispatch, selectedTeam.id, cache, list]);
+  }, [dispatch, selectedTeam.id, cache]);
+
+  const getListLeagues = useCallback((data: League[]) => {
+    return data.map((team) => {
+      return {
+        id: team.id,
+        name: team.name,
+        abbr: team.abbr,
+      };
+    });
+  }, []);
 
   useEffect(() => {
     if (!response || !response.data) return;
     if (list.length > 0) return;
-    if (Array.isArray(response.data)) {
-      const data: League[] = response.data;
-      const getTeamNames = () =>
-        data.map((team) => {
-          return {
-            id: team.id,
-            name: team.name,
-            abbr: team.abbr,
-          };
-        });
-      setList(getTeamNames);
+    if (Array.isArray(response.data) && searchQuery.length === 0) {
+      const leagues = getListLeagues(response.data);
+      if (leaguesList.length === 0) setLeaguesList(leagues);
+      setList(leagues);
+      return;
     }
-  }, [list, response?.data]);
+    if (searchQuery.length !== 0 && list.length === 0) setList(leaguesList);
+  }, [list, response?.data, searchQuery]);
 
   function debounce(callback: any, timeOut: number) {
     let id: ReturnType<typeof setTimeout> | null = null;
@@ -69,6 +76,7 @@ export default function App() {
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const searchVal = event.target.value.toLowerCase().trim();
     if (searchVal === '') setSelectedTeam(intialSelectedState);
+    setSearchQuery(searchVal);
 
     const filterTeams = (str: string) =>
       teams.filter((team: typeof teams[0]) => {
@@ -89,14 +97,17 @@ export default function App() {
       return setSelectedTeam(teamMatches);
     } else {
       const teamMatches = filterTeams(searchVal);
-
-      setList(teamMatches);
       switch (teamMatches.length) {
         case 0:
+          console.log('no match', teamMatches, searchQuery, searchVal);
+          setList(leaguesList);
           return setSelectedTeam(intialSelectedState);
         case 1:
           cache[searchVal] = teamMatches[0];
+          setList(teamMatches);
           return setSelectedTeam(teamMatches[0]);
+        default:
+          setList(teamMatches);
       }
     }
   };
@@ -134,6 +145,11 @@ export default function App() {
           <Selector list={list} selectedTeam={selectedTeam} handleSelectTeam={handleSelectTeam} />
         </fieldset>
       </form>
+      {response.data && list.length === leaguesList.length && searchQuery.length > 0 && selectedTeam.id === '' ? (
+        <section className="no-search-results">
+          <h2>No Leagues Found By That Search...</h2>
+        </section>
+      ) : null}
       {response.type === 'FETCH_LEAGUES' &&
         response.data.map((league) => <LeagueInfo key={league.id} league={league} />)}
       {response.type === 'FETCH_LEAGUE_BY_ID' && <LeagueInfo league={response.data} />}

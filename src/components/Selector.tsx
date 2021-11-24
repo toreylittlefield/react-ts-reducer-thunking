@@ -8,7 +8,6 @@ type SelectorProps = {
 };
 
 export const Selector = ({ list, selectedTeam, handleSelectTeam }: SelectorProps) => {
-  if (!Array.isArray(list)) return null;
   return (
     <>
       <label htmlFor="team-select">Select Team</label>

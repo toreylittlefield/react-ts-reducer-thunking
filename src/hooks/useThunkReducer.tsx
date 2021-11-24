@@ -85,6 +85,5 @@ export function useThunkReducer(): [StateType, React.Dispatch<ActionType>] {
     },
     [dispatch]
   );
-  console.log(state.response);
   return [state, enhancedDispatch];
 }

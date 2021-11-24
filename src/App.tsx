@@ -16,6 +16,7 @@ export default function App() {
   const [selectedTeam, setSelectedTeam] = useState<typeof teams[0]>(intialSelectedState);
 
   useEffect(() => {
+    console.count('api');
     if (selectedTeam.id === '') {
       const action: ApiDispatchTypes = 'FETCH_LEAGUES';
       const fetchAllLeagues = dispatchFetch(cache, action);
@@ -57,7 +58,9 @@ export default function App() {
       setList(leagues);
       return;
     }
-    if (searchQuery.length !== 0 && list.length === 0) setList(leaguesList);
+    if (searchQuery.length !== 0 && list.length === 0) {
+      setList(leaguesList);
+    }
   }, [list, response?.data, searchQuery]);
 
   function debounce(callback: any, timeOut: number) {
@@ -143,15 +146,28 @@ export default function App() {
             ))}
           </datalist>
           <Selector list={list} selectedTeam={selectedTeam} handleSelectTeam={handleSelectTeam} />
+          <button
+            onClick={() => {
+              const copy = [...list];
+              setList(copy.reverse());
+            }}
+          >
+            Sort
+          </button>
         </fieldset>
       </form>
-      {response.data && list.length === leaguesList.length && searchQuery.length > 0 && selectedTeam.id === '' ? (
+      {list.length === leaguesList.length && searchQuery.length > 0 && selectedTeam.id === '' ? (
         <section className="no-search-results">
           <h2>No Leagues Found By That Search...</h2>
         </section>
       ) : null}
+      <h3>Results: {list.length > 0 && searchQuery.length === 0 ? list.length : 0}</h3>
       {response.type === 'FETCH_LEAGUES' &&
-        response.data.map((league) => <LeagueInfo key={league.id} league={league} />)}
+        response.data.map((league) => {
+          if (list.find((team) => team.id.match(league.id))) {
+            return <LeagueInfo key={league.id} league={league} />;
+          }
+        })}
       {response.type === 'FETCH_LEAGUE_BY_ID' && <LeagueInfo league={response.data} />}
       {response.type === 'FETCH_LEAGUE_STANDINGS' && <LeagueInfo league={response.data} />}
 

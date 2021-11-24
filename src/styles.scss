@@ -1,0 +1,11 @@
+.App {
+  font-family: sans-serif;
+  text-align: center;
+}
+
+.no-search-results {
+  display: grid;
+  place-content: center;
+  min-height: 50vh;
+  border: 1px solid rgb(226, 208, 208);
+}

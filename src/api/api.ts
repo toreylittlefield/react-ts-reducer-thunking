@@ -2,7 +2,7 @@ import { Cache, ActionType, ApiDispatchTypes } from '../hooks/useThunkReducer';
 
 const endpoint = `https://api-football-standings.azharimm.site/leagues`;
 
-export const dispatchFetch = (cache: Cache<any>, type: ApiDispatchTypes, params: string = '') => {
+export const dispatchFetch = (cache: Cache, type: ApiDispatchTypes, params: string = '') => {
   return (dispatch: React.Dispatch<ActionType>) => {
     dispatch({ type: 'LOADING' });
     params = endpoint + params;

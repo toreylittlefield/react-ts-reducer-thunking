@@ -46,11 +46,7 @@ export default function App() {
 
   function debounce(callback: any, timeOut: number) {
     let id: ReturnType<typeof setTimeout> | null = null;
-    console.count('outer');
-
     return (...arg: any[]) => {
-      console.count('inner');
-
       if (id) {
         clearTimeout(id);
       }
@@ -62,12 +58,13 @@ export default function App() {
   }
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const searchVal = event.target.value;
+    const searchVal = event.target.value.toLowerCase().trim();
     if (searchVal === '') setSelectedTeam(intialSelectedState);
+
     const filterTeams = (str: string) =>
       teams.filter((team: typeof teams[0]) => {
-        const teamName = team.name.toLowerCase();
-        const abbr = team.abbr.toLowerCase();
+        const teamName = team.name.toLowerCase().trim();
+        const abbr = team.abbr.toLowerCase().trim();
         const testIncludes = (str: string) => {
           return function (search: string) {
             return str.includes(search);
@@ -77,13 +74,21 @@ export default function App() {
         const testAbbr = testIncludes(abbr);
         if (testTeam(str) || testAbbr(str)) return team;
       });
-    const teamMatches = filterTeams(searchVal);
-    setList(teamMatches);
-    switch (teamMatches.length) {
-      case 0:
-        return setSelectedTeam(intialSelectedState);
-      case 1:
-        return setSelectedTeam(teamMatches[0]);
+    if (searchVal in cache) {
+      const teamMatches = cache[searchVal];
+      setList(Array.from(teamMatches));
+      return setSelectedTeam(teamMatches);
+    } else {
+      const teamMatches = filterTeams(searchVal);
+
+      setList(teamMatches);
+      switch (teamMatches.length) {
+        case 0:
+          return setSelectedTeam(intialSelectedState);
+        case 1:
+          cache[searchVal] = teamMatches[0];
+          return setSelectedTeam(teamMatches[0]);
+      }
     }
   };
 
@@ -109,7 +114,14 @@ export default function App() {
         <fieldset>
           <legend>Debouncer Example</legend>
           <label htmlFor="search"> Search Leagues</label>
-          <input type="text" id="search" onChange={debounceHandleChange} />
+          <input type="text" list="teams-list" id="search" onChange={debounceHandleChange} />
+          <datalist id="teams-list">
+            {list.map((team) => (
+              <option key={team.id} value={team.abbr}>
+                {`${team.name} - ${team.abbr}`}
+              </option>
+            ))}
+          </datalist>
           <Selector list={list} selectedTeam={selectedTeam} handleSelectTeam={handleSelectTeam} />
         </fieldset>
       </form>

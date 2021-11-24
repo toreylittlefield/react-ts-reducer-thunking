@@ -5,6 +5,7 @@ import { Selector } from './components/Selector';
 import { teams } from './teamnames';
 import { useThunkReducer } from './hooks/useThunkReducer';
 import { ApiDispatchTypes, dispatchFetch } from './api/api';
+import LeagueList from './components/LeagueList';
 
 const intialSelectedState = { id: '', abbr: '', name: '' };
 
@@ -14,6 +15,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [leaguesList, setLeaguesList] = useState<typeof teams>([]);
   const [selectedTeam, setSelectedTeam] = useState<typeof teams[0]>(intialSelectedState);
+  const [toggleSort, setToggleSort] = useState(false);
 
   useEffect(() => {
     console.count('api');
@@ -149,6 +151,7 @@ export default function App() {
           <button
             onClick={() => {
               const copy = [...list];
+              setToggleSort(!toggleSort);
               setList(copy.reverse());
             }}
           >
@@ -160,14 +163,13 @@ export default function App() {
         <section className="no-search-results">
           <h2>No Leagues Found By That Search...</h2>
         </section>
-      ) : null}
-      <h3>Results: {list.length > 0 && searchQuery.length === 0 ? list.length : 0}</h3>
-      {response.type === 'FETCH_LEAGUES' &&
-        response.data.map((league) => {
-          if (list.find((team) => team.id.match(league.id))) {
-            return <LeagueInfo key={league.id} league={league} />;
-          }
-        })}
+      ) : (
+        <h3>
+          Results:
+          {list.length === leaguesList.length && searchQuery.length > 0 && selectedTeam.id === '' ? 0 : list.length}
+        </h3>
+      )}
+      <LeagueList response={response} list={list} toggleSort={toggleSort} />
       {response.type === 'FETCH_LEAGUE_BY_ID' && <LeagueInfo league={response.data} />}
       {response.type === 'FETCH_LEAGUE_STANDINGS' && <LeagueInfo league={response.data} />}
 

@@ -1,7 +1,7 @@
 import { useCallback, useReducer } from 'react';
 import { League } from '../components/LeagueInfo';
 
-export type Cache<T> = { [url: string]: T };
+export type Cache = { [key: string]: any };
 
 interface ApiInterface {
   status: boolean;
@@ -20,7 +20,7 @@ type StateType = {
   loading: boolean;
   response: null | ApiInterface;
   error: null | string;
-  cache: Cache<string>;
+  cache: Cache;
 };
 
 const initialState: StateType = {
